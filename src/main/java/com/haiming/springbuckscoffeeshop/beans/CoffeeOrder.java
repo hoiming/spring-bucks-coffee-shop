@@ -12,6 +12,30 @@ import java.util.List;
 @Entity
 @Table(name = "T_ORDER")
 public class CoffeeOrder extends BaseEntity implements Serializable {
+    public String getCustomer() {
+        return customer;
+    }
+
+    public void setCustomer(String customer) {
+        this.customer = customer;
+    }
+
+    public List<Coffee> getItems() {
+        return items;
+    }
+
+    public void setItems(List<Coffee> items) {
+        this.items = items;
+    }
+
+    public OrderState getState() {
+        return state;
+    }
+
+    public void setState(OrderState state) {
+        this.state = state;
+    }
+
     private String customer;
     @ManyToMany
     @JoinTable(name = "T_COFFEE_ORDER")
