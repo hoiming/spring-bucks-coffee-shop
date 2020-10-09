@@ -7,12 +7,16 @@ import com.haiming.springbuckscoffeeshop.converter.MoneyReadConverter;
 import com.haiming.springbuckscoffeeshop.repositories.CoffeeMongoRepository;
 import com.haiming.springbuckscoffeeshop.repositories.CoffeeOrderRepository;
 import com.haiming.springbuckscoffeeshop.repositories.CoffeeRepository;
+import com.haiming.springbuckscoffeeshop.services.CoffeeService;
 import org.joda.money.CurrencyUnit;
 import org.joda.money.Money;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
@@ -21,14 +25,19 @@ import org.springframework.data.mongodb.core.convert.MongoCustomConversions;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.transaction.annotation.Transactional;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.JedisPoolConfig;
 
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @SpringBootApplication
 @EnableJpaRepositories
+@EnableCaching(proxyTargetClass = true)
 public class SpringBucksCoffeeShopApplication implements CommandLineRunner {
 
 	@Autowired
@@ -42,13 +51,54 @@ public class SpringBucksCoffeeShopApplication implements CommandLineRunner {
 
 	@Autowired
 	private CoffeeOrderRepository coffeeOrderRepository;
+
+	@Autowired
+	private JedisPool jedisPool;
+
+	@Autowired
+	private CoffeeService coffeeService;
+
+	@Bean
+	@ConfigurationProperties("redis")
+	public JedisPoolConfig jedisPoolConfig(){
+		return new JedisPoolConfig();
+	}
+	@Bean(destroyMethod = "close")
+	public JedisPool jedisPool(@Value("${redis.host}") String host){
+		return new JedisPool(jedisPoolConfig(), host);
+	}
+
 	public static void main(String[] args) {
 		SpringApplication.run(SpringBucksCoffeeShopApplication.class, args);
 	}
 
 	@Override
 	public void run(String... args) throws Exception {
-		testMongoDBRepository();
+		initOrders();
+		testCacheSupport();
+	}
+
+	private void testCacheSupport() {
+		System.out.println("Count: " + coffeeService.findAllCoffee().size());
+		for(int i = 0 ; i < 5; i++){
+			System.out.println("reading from cache");
+			coffeeService.findAllCoffee();
+		}
+		coffeeService.reloadCoffee();
+		System.out.println("Reading after refresh");
+		coffeeService.findAllCoffee().forEach(c -> System.out.println(c));
+	}
+
+	private void testJedis() {
+		try(Jedis jedis = jedisPool.getResource()){
+			coffeeService.findAllCoffee().forEach(c ->
+					jedis.hset("springbucks-menu", c.getName(), Long.toString(c.getPrice().getAmountMinorLong()))
+			);
+			Map<String, String> menu = jedis.hgetAll("springbucks-menu");
+			System.out.println(menu);
+			String price = jedis.hget("springbucks-menu", "espresso");
+			System.out.println(price);
+		}
 	}
 
 	private void testMongoDBRepository() {
