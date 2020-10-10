@@ -24,15 +24,16 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.convert.MongoCustomConversions;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.transaction.annotation.Transactional;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
 
-import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @SpringBootApplication
@@ -75,7 +76,16 @@ public class SpringBucksCoffeeShopApplication implements CommandLineRunner {
 	@Override
 	public void run(String... args) throws Exception {
 		initOrders();
-		testCacheSupport();
+		testRedisTemplate();
+	}
+
+	private void testRedisTemplate() {
+		Optional<Coffee> coffee = coffeeService.findOneCoffee("espresso");
+		System.out.println("Coffee " + coffee);
+		for(int i = 0; i < 5; i++){
+			coffee = coffeeService.findOneCoffee("espresso");
+		}
+		System.out.println("Value from redis: " + coffee);
 	}
 
 	private void testCacheSupport() {
@@ -157,10 +167,12 @@ public class SpringBucksCoffeeShopApplication implements CommandLineRunner {
 		Coffee espresso = new Coffee();
 		espresso.setName("espresso");
 		espresso.setPrice(Money.of(CurrencyUnit.of("CNY"), 20.0));
+		espresso.setFuckshit("fuck shit");
 		coffeeRepository.save(espresso);
 		Coffee latte = new Coffee();
 		latte.setName("latte");
 		latte.setPrice(Money.of(CurrencyUnit.of("CNY"), 30.0));
+		latte.setFuckshit("fuck fuck fuck");
 		coffeeRepository.save(latte);
 
 		CoffeeOrder order = new CoffeeOrder();
@@ -173,5 +185,16 @@ public class SpringBucksCoffeeShopApplication implements CommandLineRunner {
 	@Bean
 	public MongoCustomConversions mongoCustomConversions(){
 		return new MongoCustomConversions(Arrays.asList(new MoneyReadConverter()));
+	}
+
+	@Bean
+	public RedisTemplate<String, Coffee> redisTemplate(RedisConnectionFactory redisConnectionFactory){
+		RedisTemplate<String, Coffee> template = new RedisTemplate<>();
+		template.setConnectionFactory(redisConnectionFactory);
+		Jackson2JsonRedisSerializer<Coffee> jackson2JsonRedisSerializer = new Jackson2JsonRedisSerializer<Coffee>(Coffee.class);
+		template.setValueSerializer(jackson2JsonRedisSerializer);
+		template.setKeySerializer(new StringRedisSerializer());
+		template.setHashKeySerializer(new StringRedisSerializer());
+		return template;
 	}
 }

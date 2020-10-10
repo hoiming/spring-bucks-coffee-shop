@@ -12,7 +12,7 @@ import java.util.Date;
 
 @Entity
 @Table(name = "T_MENU")
-public class Coffee extends BaseEntity implements Serializable {
+public class Coffee extends BaseEntity {
 
     private String name;
     @Column
@@ -74,8 +74,18 @@ public class Coffee extends BaseEntity implements Serializable {
                 .add("id", id)
                 .add("name", name)
                 .add("price", price)
+                .add("fuckshit", fuckshit)
                 .add("createTime", createTime)
                 .add("updateTime", updateTime)
                 .toString();
+    }
+    private String fuckshit;
+
+    public String getFuckshit() {
+        return fuckshit;
+    }
+
+    public void setFuckshit(String fuckshit) {
+        this.fuckshit = fuckshit;
     }
 }
