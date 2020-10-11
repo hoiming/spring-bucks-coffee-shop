@@ -74,18 +74,8 @@ public class Coffee extends BaseEntity {
                 .add("id", id)
                 .add("name", name)
                 .add("price", price)
-                .add("fuckshit", fuckshit)
                 .add("createTime", createTime)
                 .add("updateTime", updateTime)
                 .toString();
-    }
-    private String fuckshit;
-
-    public String getFuckshit() {
-        return fuckshit;
-    }
-
-    public void setFuckshit(String fuckshit) {
-        this.fuckshit = fuckshit;
     }
 }

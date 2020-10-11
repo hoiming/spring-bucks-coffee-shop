@@ -1,6 +1,8 @@
 package com.haiming.springbuckscoffeeshop.services;
 
 import com.haiming.springbuckscoffeeshop.beans.Coffee;
+import com.haiming.springbuckscoffeeshop.beans.CoffeeCache;
+import com.haiming.springbuckscoffeeshop.repositories.CoffeeCacheRepository;
 import com.haiming.springbuckscoffeeshop.repositories.CoffeeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheConfig;
@@ -25,6 +27,8 @@ public class CoffeeService {
     @Autowired
     private CoffeeRepository coffeeRepository;
 
+    @Autowired
+    private CoffeeCacheRepository coffeeCacheRepository;
     private static final String CACHE = "springbucks-coffee";
 
     @Autowired
@@ -55,5 +59,27 @@ public class CoffeeService {
     @CacheEvict
     public void reloadCoffee(){
 
+    }
+
+    public Optional<Coffee> findSimpleCoffeeFromCache(String name){
+        Optional<CoffeeCache> cached = coffeeCacheRepository.findOneByName(name);
+        if(cached.isPresent()){
+            CoffeeCache coffeeCache = cached.get();
+            Coffee coffee = new Coffee();
+            coffee.setId(coffeeCache.getId());
+            coffee.setName(coffeeCache.getName());
+            coffee.setPrice(coffeeCache.getPrice());
+            return Optional.of(coffee);
+        }else{
+            Optional<Coffee> raw = findOneCoffee(name);
+            raw.ifPresent(c -> {
+                CoffeeCache cache = new CoffeeCache();
+                cache.setId(c.getId());
+                cache.setName(c.getName());
+                cache.setPrice(c.getPrice());
+                coffeeCacheRepository.save(cache);
+            });
+            return raw;
+        }
     }
 }

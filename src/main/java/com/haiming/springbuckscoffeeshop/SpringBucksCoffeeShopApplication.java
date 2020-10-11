@@ -3,7 +3,9 @@ package com.haiming.springbuckscoffeeshop;
 import com.haiming.springbuckscoffeeshop.beans.Coffee;
 import com.haiming.springbuckscoffeeshop.beans.CoffeeOrder;
 import com.haiming.springbuckscoffeeshop.beans.OrderState;
+import com.haiming.springbuckscoffeeshop.converter.BytesToMoneyConverter;
 import com.haiming.springbuckscoffeeshop.converter.MoneyReadConverter;
+import com.haiming.springbuckscoffeeshop.converter.MoneyToBytesConverter;
 import com.haiming.springbuckscoffeeshop.repositories.CoffeeMongoRepository;
 import com.haiming.springbuckscoffeeshop.repositories.CoffeeOrderRepository;
 import com.haiming.springbuckscoffeeshop.repositories.CoffeeRepository;
@@ -26,6 +28,8 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.convert.RedisCustomConversions;
+import org.springframework.data.redis.repository.configuration.EnableRedisRepositories;
 import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,6 +43,7 @@ import java.util.stream.Collectors;
 @SpringBootApplication
 @EnableJpaRepositories
 @EnableCaching(proxyTargetClass = true)
+@EnableRedisRepositories
 public class SpringBucksCoffeeShopApplication implements CommandLineRunner {
 
 	@Autowired
@@ -76,7 +81,16 @@ public class SpringBucksCoffeeShopApplication implements CommandLineRunner {
 	@Override
 	public void run(String... args) throws Exception {
 		initOrders();
-		testRedisTemplate();
+		testRedisRepository();
+	}
+
+	private void testRedisRepository() {
+		Optional<Coffee> coffee = coffeeService.findSimpleCoffeeFromCache("espresso");
+		System.out.println("Coffee " + coffee);
+		for(int i = 0; i < 5; i++){
+			coffee = coffeeService.findSimpleCoffeeFromCache("espresso");
+		}
+		System.out.println("Value from redis: " + coffee);
 	}
 
 	private void testRedisTemplate() {
@@ -167,12 +181,10 @@ public class SpringBucksCoffeeShopApplication implements CommandLineRunner {
 		Coffee espresso = new Coffee();
 		espresso.setName("espresso");
 		espresso.setPrice(Money.of(CurrencyUnit.of("CNY"), 20.0));
-		espresso.setFuckshit("fuck shit");
 		coffeeRepository.save(espresso);
 		Coffee latte = new Coffee();
 		latte.setName("latte");
 		latte.setPrice(Money.of(CurrencyUnit.of("CNY"), 30.0));
-		latte.setFuckshit("fuck fuck fuck");
 		coffeeRepository.save(latte);
 
 		CoffeeOrder order = new CoffeeOrder();
@@ -191,10 +203,11 @@ public class SpringBucksCoffeeShopApplication implements CommandLineRunner {
 	public RedisTemplate<String, Coffee> redisTemplate(RedisConnectionFactory redisConnectionFactory){
 		RedisTemplate<String, Coffee> template = new RedisTemplate<>();
 		template.setConnectionFactory(redisConnectionFactory);
-		Jackson2JsonRedisSerializer<Coffee> jackson2JsonRedisSerializer = new Jackson2JsonRedisSerializer<Coffee>(Coffee.class);
-		template.setValueSerializer(jackson2JsonRedisSerializer);
-		template.setKeySerializer(new StringRedisSerializer());
-		template.setHashKeySerializer(new StringRedisSerializer());
 		return template;
+	}
+
+	@Bean
+	public RedisCustomConversions redisCustomConversions(){
+		return new RedisCustomConversions(Arrays.asList(new MoneyToBytesConverter(), new BytesToMoneyConverter()));
 	}
 }
