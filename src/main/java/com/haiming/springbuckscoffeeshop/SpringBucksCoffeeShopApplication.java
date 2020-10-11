@@ -20,6 +20,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -27,23 +28,30 @@ import org.springframework.data.mongodb.core.convert.MongoCustomConversions;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.*;
 import org.springframework.data.redis.core.convert.RedisCustomConversions;
 import org.springframework.data.redis.repository.configuration.EnableRedisRepositories;
 import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.transaction.annotation.Transactional;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Scheduler;
+import reactor.core.scheduler.Schedulers;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
 
+import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
 
 @SpringBootApplication
 @EnableJpaRepositories
 @EnableCaching(proxyTargetClass = true)
 @EnableRedisRepositories
+
 public class SpringBucksCoffeeShopApplication implements CommandLineRunner {
 
 	@Autowired
@@ -63,7 +71,10 @@ public class SpringBucksCoffeeShopApplication implements CommandLineRunner {
 
 	@Autowired
 	private CoffeeService coffeeService;
+	private static final String KEY = "COFFEE_MENU";
 
+	@Autowired
+	private ReactiveStringRedisTemplate redisTemplate;
 	@Bean
 	@ConfigurationProperties("redis")
 	public JedisPoolConfig jedisPoolConfig(){
@@ -81,7 +92,33 @@ public class SpringBucksCoffeeShopApplication implements CommandLineRunner {
 	@Override
 	public void run(String... args) throws Exception {
 		initOrders();
-		testRedisRepository();
+		testRedisOnReactor();
+	}
+
+	private void testRedisOnReactor() throws InterruptedException {
+		List<Coffee> coffeeList = coffeeService.findAllCoffee();
+		CountDownLatch latch = new CountDownLatch(1);
+		ReactiveHashOperations<String, String, String> hashOps = redisTemplate.opsForHash();
+		Flux.fromIterable(coffeeList)
+				.publishOn(Schedulers.single())
+				.doOnComplete(() -> System.out.println("list ok"))
+				.flatMap(c -> {
+					System.out.println("try put " + c);
+					return hashOps.put(KEY, c.getName(), c.getPrice().toString());
+				})
+				.doOnComplete(() -> System.out.println("set ok"))
+				.concatWith(redisTemplate.expire(KEY, Duration.ofMinutes(1)))
+				.doOnComplete(() -> System.out.println("expire ok"))
+				.onErrorResume(e -> {
+					System.err.println("exception " + e.getMessage());
+					return Mono.just(false);
+				})
+				.subscribe(b -> System.out.println("Boolean: " + b),
+						e -> System.err.println("Exception " + e.getMessage()),
+						() -> latch.countDown());
+		System.out.println("waiting");
+		latch.await();
+
 	}
 
 	private void testRedisRepository() {
