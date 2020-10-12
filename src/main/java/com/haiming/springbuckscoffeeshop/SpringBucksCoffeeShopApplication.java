@@ -6,6 +6,7 @@ import com.haiming.springbuckscoffeeshop.beans.OrderState;
 import com.haiming.springbuckscoffeeshop.converter.BytesToMoneyConverter;
 import com.haiming.springbuckscoffeeshop.converter.MoneyReadConverter;
 import com.haiming.springbuckscoffeeshop.converter.MoneyToBytesConverter;
+import com.haiming.springbuckscoffeeshop.converter.MoneyWriteConverter;
 import com.haiming.springbuckscoffeeshop.repositories.CoffeeMongoRepository;
 import com.haiming.springbuckscoffeeshop.repositories.CoffeeOrderRepository;
 import com.haiming.springbuckscoffeeshop.repositories.CoffeeRepository;
@@ -24,9 +25,11 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
 import org.springframework.data.mongodb.core.convert.MongoCustomConversions;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.*;
 import org.springframework.data.redis.core.convert.RedisCustomConversions;
@@ -47,6 +50,8 @@ import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
 
+import static org.springframework.data.mongodb.core.query.Criteria.where;
+
 @SpringBootApplication
 @EnableJpaRepositories
 @EnableCaching(proxyTargetClass = true)
@@ -64,6 +69,9 @@ public class SpringBucksCoffeeShopApplication implements CommandLineRunner {
 	private MongoTemplate mongoTemplate;
 
 	@Autowired
+	private ReactiveMongoTemplate reactiveMongoTemplate;
+
+	@Autowired
 	private CoffeeOrderRepository coffeeOrderRepository;
 
 	@Autowired
@@ -75,6 +83,8 @@ public class SpringBucksCoffeeShopApplication implements CommandLineRunner {
 
 	@Autowired
 	private ReactiveStringRedisTemplate redisTemplate;
+	private CountDownLatch cdl = new CountDownLatch(2);
+
 	@Bean
 	@ConfigurationProperties("redis")
 	public JedisPoolConfig jedisPoolConfig(){
@@ -92,7 +102,40 @@ public class SpringBucksCoffeeShopApplication implements CommandLineRunner {
 	@Override
 	public void run(String... args) throws Exception {
 		initOrders();
-		testRedisOnReactor();
+		testReactorMongoDB();
+	}
+
+	private void testReactorMongoDB() throws InterruptedException {
+		startFromInsertion(() -> {
+			System.out.println("Runnable");
+			decreaseHighPrice();
+		});
+		System.out.println("after starting");
+		cdl.await();
+	}
+
+	private void decreaseHighPrice() {
+		reactiveMongoTemplate.updateMulti(Query.query(where("price").gte(3000L)),
+				new Update().inc("price", -500L).currentDate("updateTime"), Coffee.class)
+				.doFinally(s ->
+				{
+					cdl.countDown();
+					System.out.println("Finally 2, " + s);
+				}).subscribe(r -> System.out.println("result is " + r));
+	}
+
+	public void startFromInsertion(Runnable runnable){
+		reactiveMongoTemplate.insertAll(coffeeService.findAllCoffee())
+				.publishOn(Schedulers.elastic())
+				.doOnNext(c -> System.out.println("Next: " + c))
+				.doOnComplete(runnable)
+				.doFinally(s -> {
+					cdl.countDown();
+					System.out.println("Finally 1, " + s);
+				})
+				.count()
+				.subscribe(c -> System.out.println("Insert " + c + " records"));
+
 	}
 
 	private void testRedisOnReactor() throws InterruptedException {
@@ -209,7 +252,7 @@ public class SpringBucksCoffeeShopApplication implements CommandLineRunner {
 		coffee.setUpdateTime(new Date());
 		com.haiming.springbuckscoffeeshop.documents.Coffee saved = mongoTemplate.save(coffee);
 		System.out.println(saved);
-		List<com.haiming.springbuckscoffeeshop.documents.Coffee> list = mongoTemplate.find(Query.query(Criteria.where("name").is("foobar")), com.haiming.springbuckscoffeeshop.documents.Coffee.class);
+		List<com.haiming.springbuckscoffeeshop.documents.Coffee> list = mongoTemplate.find(Query.query(where("name").is("foobar")), com.haiming.springbuckscoffeeshop.documents.Coffee.class);
 		System.out.println(list.size());
 		list.forEach(c -> System.out.println(c));
 
@@ -233,7 +276,7 @@ public class SpringBucksCoffeeShopApplication implements CommandLineRunner {
 
 	@Bean
 	public MongoCustomConversions mongoCustomConversions(){
-		return new MongoCustomConversions(Arrays.asList(new MoneyReadConverter()));
+		return new MongoCustomConversions(Arrays.asList(new MoneyReadConverter(), new MoneyWriteConverter()));
 	}
 
 	@Bean
