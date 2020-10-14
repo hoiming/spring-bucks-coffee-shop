@@ -102,7 +102,7 @@ public class SpringBucksCoffeeShopApplication implements CommandLineRunner {
 	@Override
 	public void run(String... args) throws Exception {
 		initOrders();
-		testReactorMongoDB();
+
 	}
 
 	private void testReactorMongoDB() throws InterruptedException {

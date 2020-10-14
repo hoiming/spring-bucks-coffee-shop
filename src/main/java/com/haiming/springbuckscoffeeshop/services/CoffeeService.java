@@ -56,6 +56,11 @@ public class CoffeeService {
         return coffeeRepository.findAll();
     }
 
+    @Cacheable
+    public List<Coffee> findNameIn(List<String> names){
+        return coffeeRepository.findByNameInOrderById(names);
+    }
+
     @CacheEvict
     public void reloadCoffee(){
 
