@@ -6,6 +6,7 @@ import com.haiming.springbuckscoffeeshop.beans.OrderState;
 import com.haiming.springbuckscoffeeshop.repositories.CoffeeOrderRepository;
 import com.haiming.springbuckscoffeeshop.repositories.CoffeeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
@@ -32,5 +33,9 @@ public class CoffeeOrderService {
         order.setState(state);
         orderRepository.save(order);
         return true;
+    }
+
+    public CoffeeOrder get(Long id){
+        return orderRepository.getOne(id);
     }
 }
