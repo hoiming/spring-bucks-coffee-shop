@@ -66,6 +66,10 @@ public class CoffeeService {
 
     }
 
+    public Coffee save(Coffee coffee){
+        return coffeeRepository.save(coffee);
+    }
+
     public Optional<Coffee> findSimpleCoffeeFromCache(String name){
         Optional<CoffeeCache> cached = coffeeCacheRepository.findOneByName(name);
         if(cached.isPresent()){
