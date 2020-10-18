@@ -20,6 +20,8 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import javax.validation.Valid;
+import javax.validation.Validation;
+import javax.validation.ValidationException;
 import javax.xml.ws.Response;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -51,7 +53,8 @@ public class CoffeeController {
     public Coffee addCoffeeWithoutBindingResult(@Valid NewCoffeeRequest coffee, BindingResult result){
         if(result.hasErrors()){
             System.err.println("Binding errors: " + result);
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Fuck you");
+            //throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Fuck you");
+            throw new ValidationException("Binding errors." + result);
 
         }
         Coffee toSave = new Coffee();
