@@ -1,5 +1,6 @@
 package com.haiming.springbuckscoffeeshop.controllers;
 
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -13,9 +14,10 @@ import java.util.Map;
 public class GlobalControllerAdvice {
     @ExceptionHandler(ValidationException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public Map<String, String> validationExceptionHandler(ValidationException exception){
+    public Map<String, String> validationExceptionHandler(ValidationException exception, HttpMethod method){
         Map<String, String> map = new HashMap<>();
         map.put("message", exception.getMessage());
+        map.put("method", metho.toString());
         return map;
     }
 }
