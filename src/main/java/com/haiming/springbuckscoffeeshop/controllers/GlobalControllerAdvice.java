@@ -17,7 +17,7 @@ public class GlobalControllerAdvice {
     public Map<String, String> validationExceptionHandler(ValidationException exception, HttpMethod method){
         Map<String, String> map = new HashMap<>();
         map.put("message", exception.getMessage());
-        map.put("method", metho.toString());
+        map.put("method", method.toString());
         return map;
     }
 }
