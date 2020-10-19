@@ -11,6 +11,7 @@ import com.haiming.springbuckscoffeeshop.repositories.CoffeeMongoRepository;
 import com.haiming.springbuckscoffeeshop.repositories.CoffeeOrderRepository;
 import com.haiming.springbuckscoffeeshop.repositories.CoffeeRepository;
 import com.haiming.springbuckscoffeeshop.services.CoffeeService;
+import com.haiming.springbuckscoffeeshop.support.PerformanceInterceptor;
 import org.joda.money.CurrencyUnit;
 import org.joda.money.Money;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +38,9 @@ import org.springframework.data.redis.repository.configuration.EnableRedisReposi
 import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistration;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
@@ -57,7 +61,7 @@ import static org.springframework.data.mongodb.core.query.Criteria.where;
 @EnableCaching(proxyTargetClass = true)
 @EnableRedisRepositories
 
-public class SpringBucksCoffeeShopApplication implements CommandLineRunner {
+public class SpringBucksCoffeeShopApplication implements CommandLineRunner, WebMvcConfigurer {
 
 	@Autowired
 	private CoffeeRepository coffeeRepository;
@@ -112,6 +116,13 @@ public class SpringBucksCoffeeShopApplication implements CommandLineRunner {
 		});
 		System.out.println("after starting");
 		cdl.await();
+	}
+
+	@Override
+	public void addInterceptors( InterceptorRegistry registry){
+		registry.addInterceptor(new PerformanceInterceptor())
+				.addPathPatterns("/coffee/**")
+				.addPathPatterns("/order/**");
 	}
 
 	private void decreaseHighPrice() {

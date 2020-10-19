@@ -10,6 +10,8 @@ import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 
+import java.util.TimeZone;
+
 @Configuration
 public class Configs {
 
@@ -20,7 +22,10 @@ public class Configs {
 
     @Bean
     public Jackson2ObjectMapperBuilderCustomizer jackson2ObjectMapperBuilderCustomizer(){
-        return builder -> builder.indentOutput(true);
+        return builder ->{
+            builder.indentOutput(true);
+            builder.timeZone(TimeZone.getTimeZone("Asin/Shanghai"));
+        };
     }
 
 }
