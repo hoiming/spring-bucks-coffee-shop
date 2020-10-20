@@ -23,6 +23,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -37,6 +38,9 @@ import org.springframework.data.redis.core.convert.RedisCustomConversions;
 import org.springframework.data.redis.repository.configuration.EnableRedisRepositories;
 import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -113,8 +117,21 @@ public class SpringBucksCoffeeShopApplication implements CommandLineRunner, WebM
 	@Override
 	public void run(String... args) throws Exception {
 		initOrders();
-		restGetCoffee();
+		restGetCoffeeAdvance();
 
+	}
+
+	private void restGetCoffeeAdvance() {
+		URI uri = UriComponentsBuilder.fromUriString("http://localhost:8080/coffee/{id}").build(1);
+		RequestEntity<Void> requestEntity = RequestEntity.get(uri)
+				.accept(MediaType.APPLICATION_XML).build();
+		ResponseEntity<String> resp = restTemplate.exchange(requestEntity, String.class);
+
+		String coffeeUri = "http://localhost:8080/coffee/";
+		ParameterizedTypeReference<List<Coffee>> ptr = new ParameterizedTypeReference<List<Coffee>>() {
+		};
+		ResponseEntity<List<Coffee>> list = restTemplate.exchange(coffeeUri, HttpMethod.GET, null, ptr);
+		list.getBody().forEach(c -> System.out.println("foobar " + c));
 	}
 
 	private void restGetCoffee() {
