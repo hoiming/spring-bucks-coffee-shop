@@ -14,6 +14,7 @@ import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import javax.swing.text.html.Option;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -68,6 +69,10 @@ public class CoffeeService {
 
     public Coffee save(Coffee coffee){
         return coffeeRepository.save(coffee);
+    }
+
+    public Optional<Coffee> findById(Long id){
+        return coffeeRepository.findById(id);
     }
 
     public Optional<Coffee> findSimpleCoffeeFromCache(String name){

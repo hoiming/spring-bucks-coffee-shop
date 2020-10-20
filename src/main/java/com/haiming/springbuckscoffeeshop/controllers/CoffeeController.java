@@ -42,6 +42,10 @@ public class CoffeeController {
         return coffeeService.findAllCoffee();
     }
 
+    @GetMapping(path="/{id}")
+    public Coffee getById(@PathVariable Long id){
+        return coffeeService.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+    }
     @GetMapping(path= "/")
     public Coffee get(@RequestParam String name){
         Optional<Coffee> coffeeOptional = coffeeService.findOneCoffee(name);

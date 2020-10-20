@@ -37,10 +37,13 @@ import org.springframework.data.redis.core.convert.RedisCustomConversions;
 import org.springframework.data.redis.repository.configuration.EnableRedisRepositories;
 import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
+import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
@@ -49,6 +52,7 @@ import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
 
+import java.net.URI;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
@@ -82,6 +86,9 @@ public class SpringBucksCoffeeShopApplication implements CommandLineRunner, WebM
 	private JedisPool jedisPool;
 
 	@Autowired
+	private RestTemplate restTemplate;
+
+	@Autowired
 	private CoffeeService coffeeService;
 	private static final String KEY = "COFFEE_MENU";
 
@@ -106,7 +113,23 @@ public class SpringBucksCoffeeShopApplication implements CommandLineRunner, WebM
 	@Override
 	public void run(String... args) throws Exception {
 		initOrders();
+		restGetCoffee();
 
+	}
+
+	private void restGetCoffee() {
+		URI uri = UriComponentsBuilder
+				.fromUriString("http://localhost:8080/coffee/{id}")
+				.build(1);
+		ResponseEntity<Coffee> c = restTemplate .getForEntity(uri, Coffee.class);
+		System.out.println("Response status: " + c.getStatusCode() + "Headers: " + c.getHeaders());
+		System.out.println("Coffee: " + c.getBody());
+		String uriForArr = "http://localhost:8080/coffee/";
+		ResponseEntity<Coffee[]> arr = restTemplate.getForEntity(uriForArr, Coffee[].class);
+		List<Coffee> list = Arrays.asList(arr.getBody());
+		for (Coffee coffee : list) {
+			System.out.println(coffee);
+		}
 	}
 
 	private void testReactorMongoDB() throws InterruptedException {
