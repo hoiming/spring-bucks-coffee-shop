@@ -96,4 +96,8 @@ public class CoffeeService {
             return raw;
         }
     }
+
+    public long getCoffeeCount(){
+        return coffeeRepository.count();
+    }
 }

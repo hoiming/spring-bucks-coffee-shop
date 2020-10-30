@@ -117,7 +117,7 @@ public class SpringBucksCoffeeShopApplication implements CommandLineRunner, WebM
 	@Override
 	public void run(String... args) throws Exception {
 		initOrders();
-		restGetCoffeeAdvance();
+		//restGetCoffeeAdvance();
 
 	}
 
