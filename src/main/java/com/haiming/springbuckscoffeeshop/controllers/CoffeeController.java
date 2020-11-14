@@ -38,7 +38,8 @@ public class CoffeeController {
     private CoffeeService coffeeService;
 
     @GetMapping(path = "/", params = "!name")
-    public List<Coffee> getall(){
+    public List<Coffee> getall() throws InterruptedException {
+        Thread.sleep(500);
         return coffeeService.findAllCoffee();
     }
 
