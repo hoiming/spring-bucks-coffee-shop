@@ -3,6 +3,7 @@ package com.haiming.springbuckscoffeeshop.controllers;
 import com.haiming.springbuckscoffeeshop.beans.Coffee;
 import com.haiming.springbuckscoffeeshop.services.CoffeeService;
 import com.haiming.springbuckscoffeeshop.viewmodels.NewCoffeeRequest;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
@@ -32,6 +33,7 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/coffee")
+@RateLimiter(name = "coffee")
 public class CoffeeController {
 
     @Autowired
